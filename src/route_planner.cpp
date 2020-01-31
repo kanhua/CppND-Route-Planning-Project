@@ -38,6 +38,9 @@ float RoutePlanner::CalculateHValue(RouteModel::Node const *node) {
 void RoutePlanner::AddNeighbors(RouteModel::Node *current_node) {
     current_node->FindNeighbors();
     for (RouteModel::Node *node : current_node->neighbors) {
+        if (node->visited) {
+            continue;
+        }
         node->parent = current_node;
         node->g_value = current_node->g_value + current_node->distance(*node);
         node->h_value = CalculateHValue(node);
@@ -63,7 +66,7 @@ bool compare(RouteModel::Node *node1, RouteModel::Node *node2) {
 RouteModel::Node *RoutePlanner::NextNode() {
 
     sort(open_list.begin(), open_list.end(), compare);
-    RouteModel::Node *next_node = open_list[0];
+    RouteModel::Node *next_node = open_list.front();
     open_list.erase(open_list.begin());
 
     return next_node;
@@ -79,19 +82,20 @@ RouteModel::Node *RoutePlanner::NextNode() {
 // - The returned vector should be in the correct order: the start node should be the first element
 //   of the vector, the end node should be the last element.
 
-std::vector <RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node *current_node) {
+std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node *current_node) {
     // Create path_found vector
     distance = 0.0f;
-    std::vector <RouteModel::Node> path_found;
+    std::vector<RouteModel::Node> path_found;
 
     // TODO: Implement your solution here.
     RouteModel::Node *node = current_node;
     path_found.push_back(*node);
-    do {
+    while (node->parent != nullptr) {
+        distance += node->distance(*node->parent);
         node = node->parent;
         path_found.push_back(*node);
-        distance += node->distance(*node->parent);
-    } while (node != start_node);
+    }
+
 
     std::reverse(path_found.begin(), path_found.end());
 
@@ -114,22 +118,18 @@ void RoutePlanner::AStarSearch() {
 
     // TODO: Implement your solution here.
     open_list.push_back(start_node);
-    while(open_list.size()>0)
-    {
-        current_node=NextNode();
-        if (current_node->x == end_node->x && current_node->y == end_node ->y)
-        {
+    start_node->visited=true;
+    while (!open_list.empty()) {
+        current_node = NextNode();
+        if (current_node == end_node) {
             break;
         }
-        if (current_node->visited==true)
-        {
-            continue;
-        }
+
         AddNeighbors(current_node);
 
     }
 
 
-    m_Model.path=ConstructFinalPath(current_node);
+    m_Model.path = ConstructFinalPath(current_node);
 
 }
